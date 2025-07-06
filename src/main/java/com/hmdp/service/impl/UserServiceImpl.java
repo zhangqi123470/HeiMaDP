@@ -71,7 +71,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         //如果存在的话，将用户状态存入Session中
         session.setAttribute("user",user);
-        return null;
+        return Result.ok();
     }
 
     private User createUserWithPhone(String phone) {
