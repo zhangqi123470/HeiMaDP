@@ -67,7 +67,7 @@ public class UserController {
     //跳转到"我的"页面
     public Result me(){
         log.info("获取当前用户信息");
-        User user=UserHolder.getUser();
+        UserDTO user=UserHolder.getUser();
         log.info("当前用户信息:{}",user);
         return Result.ok(user);
     }
