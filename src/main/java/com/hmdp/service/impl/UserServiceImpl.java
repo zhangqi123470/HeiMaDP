@@ -87,13 +87,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         //将User对象转变为HashMap存储
         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO);
+        //将HashMap的Value转换成String类型
+        userMap.forEach((k,v)->userMap.put(k,v.toString()));
         //存储
         stringRedisTemplate.opsForHash().putAll("login:token:"+token,userMap);
         //为toke设置有效期
-        stringRedisTemplate.expire(token, LOGIN_USER_TTL , TimeUnit.MINUTES);
+        stringRedisTemplate.expire("login:token"+token, LOGIN_USER_TTL , TimeUnit.MINUTES);
 
 
-        return Result.ok();
+        return Result.ok(token);
     }
 
     private User createUserWithPhone(String phone) {
