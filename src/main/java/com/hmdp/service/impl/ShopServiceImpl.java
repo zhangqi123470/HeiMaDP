@@ -1,5 +1,6 @@
 package com.hmdp.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Shop;
@@ -13,9 +14,11 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
+import static com.hmdp.utils.RedisConstants.CACHE_SHOP_TTL;
+
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author 虎哥
@@ -33,19 +36,44 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         log.info("查询店铺缓存");
         String shopJson = stringRedisTemplate.opsForValue().get("cache:shop:" + id);
         // 1.2.判断缓存是否存在
-        if (shopJson != null) {
-            // 1.3.存在，直接返回
+        // if (shopJson != null) {
+        // // 1.3.存在，直接返回
+        // Shop shop = JSONUtil.toBean(shopJson, Shop.class);
+        // return Result.ok(shop);
+        // }
+        if (StrUtil.isNotBlank(shopJson)) {
             Shop shop = JSONUtil.toBean(shopJson, Shop.class);
             return Result.ok(shop);
+        }
+        // 判断命中的是否为空值
+        if (shopJson != null) {
+            return Result.fail("店铺不存在0");
         }
         // 1.4.不存在，根据id查询数据库
         Shop shop = getById(id);
         if (shop == null) {
+            // 将空对象写入缓存
+            stringRedisTemplate.opsForValue().set("cache:shop:" + id, "", CACHE_SHOP_TTL, TimeUnit.MINUTES);
             return Result.fail("店铺不存在");
         }
-        stringRedisTemplate.opsForValue().set("cache:shop:" + id, JSONUtil.toJsonStr(shop), TimeUnit.MINUTES.toSeconds(30));
+        stringRedisTemplate.opsForValue().set("cache:shop:" + id, JSONUtil.toJsonStr(shop),
+                TimeUnit.MINUTES.toSeconds(CACHE_SHOP_TTL));
         return Result.ok(shop);
     }
 
+    @Override
+    public Result update(Shop shop) {
+        // 更新数据库
+        log.info("更新店铺缓存");
+        Long id = shop.getId();
+        if (id == null) {
+            return Result.fail("店铺id不能为空");
+        }
+        updateById(shop);
+
+        // 删除缓存
+        stringRedisTemplate.delete("cache:shop:" + id);
+        return Result.ok();
+    }
 
 }
