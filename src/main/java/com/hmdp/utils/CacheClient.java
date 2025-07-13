@@ -56,7 +56,7 @@ public class CacheClient {
 
     }
     //通过logicExpire实现处理缓存穿透的问题
-    public <R,ID> R queryWithLogicExpire(String key,ID id,Class<R> type,Function<ID,R> dbFallback,Long timeout,TimeUnit unit){
+    public <R,TD> R queryWithLogicExpire(String key,ID id,Class<R> type,Function<ID,R> dbFallback,Long timeout,TimeUnit unit){
         //从Redis中查询数据
         String json=stringRedisTemplate.opsForValue().get(key);
         if(StrUtil.isBlank(json)){
