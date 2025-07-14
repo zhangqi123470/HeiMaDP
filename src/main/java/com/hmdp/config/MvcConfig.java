@@ -7,14 +7,20 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
 @Configuration
 public class MvcConfig implements WebMvcConfigurer {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private RefreshTokenInterceptor refreshTokenInterceptor;
+    @Autowired
+    private LoginInterceptor loginInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**");
-        registry.addInterceptor(new LoginInterceptor())
+        registry.addInterceptor(refreshTokenInterceptor).addPathPatterns("/**");
+        registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/user/code",
@@ -23,9 +29,8 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/blog/hot",
                         "/shop/**",
                         "/shop-type/**",
-                        "/voucher/**",
-                        "/voucher-order/**"
-                );
+                        "/voucher/**"
+                        );
 
     }
 }

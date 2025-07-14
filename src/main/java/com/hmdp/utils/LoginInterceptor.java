@@ -5,6 +5,7 @@ import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import static net.sf.jsqlparser.util.validation.metadata.NamedObject.user;
 @Slf4j
+@Component
 public class LoginInterceptor implements HandlerInterceptor {
     //判断是否需要对用户请求进行拦截
     @Override
