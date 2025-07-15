@@ -1,5 +1,7 @@
 package com.hmdp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.SeckillVoucher;
@@ -11,6 +13,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,34 +64,74 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             log.info("库存不足");
             return Result.fail("库存不足!");
         }
-        // 扣减库存
-        boolean success = seckillVoucherService.update()
-                .setSql("stock=stock-1")
-                .eq("voucher_id", voucherId)
-                .update();
-        if (!success) {
-            log.info("库存不足");
-            return Result.fail("库存不足!");
-        }
+        //实现一人一单功能’
+        //如果当前订单的userId是重复的，则报错
+        Long userId=UserHolder.getUser().getId();
+//        int count=query().eq("user_id",userId).eq("voucher_Id",voucherId).count();
+//        if(count>0){
+//            return Result.fail("用户已经购买过一次!");
+//        }
+//        // 扣减库存
+//        boolean success = seckillVoucherService.update()
+//                .setSql("stock=stock-1")
+//                .eq("voucher_id", voucherId)
+//                .update();
+//        if (!success) {
+//            log.info("库存不足");
+//            return Result.fail("库存不足!");
+//        }
         // 如果抢购成功，创建一个订单
         // 设置订单id和用户id
-        Long orderId = redisIdWorker.nextId("order");
-        VoucherOrder voucherOrder = new VoucherOrder();
-        UserDTO user = UserHolder.getUser();
-        if (user == null) {
-            return Result.fail("用户未登录");
+//        Long orderId = redisIdWorker.nextId("order");
+//        VoucherOrder voucherOrder = new VoucherOrder();
+//        UserDTO user = UserHolder.getUser();
+//        if (user == null) {
+//            return Result.fail("用户未登录");
+//        }
+////        Long userId = user.getId();
+//        voucherOrder.setId(orderId);
+//        voucherOrder.setUserId(user.getId());
+//        voucherOrder.setVoucherId(voucherId);
+//        voucherOrder.setCreateTime(LocalDateTime.now());
+//        voucherOrder.setPayType(1); // 1:余额支付
+//        voucherOrder.setStatus(1);  // 1:未支付
+//        log.info("存储voucherOrder:{}",voucherOrder);
+//        save(voucherOrder);
+//
+//        // 设置创建时间
+//
+//        return Result.ok(orderId);
+        synchronized(userId.toString().intern()){
+            //获取跟事务有关的代理对象
+            IVoucherOrderService proxy=(IVoucherOrderService) AopContext.currentProxy();
+            return proxy.createVoucherOrder(userId,voucherId);
         }
-        Long userId = user.getId();
-        voucherOrder.setId(orderId);
-        voucherOrder.setUserId(user.getId());
-        voucherOrder.setVoucherId(voucherId);
-        voucherOrder.setCreateTime(LocalDateTime.now());
-        voucherOrder.setPayType(1); // 1:余额支付
-        voucherOrder.setStatus(1);  // 1:未支付
-        log.info("存储voucherOrder:{}",voucherOrder);
-        save(voucherOrder);
 
-        // 设置创建时间
+    }
+    //将创建订单的功能分离开
+    @Transactional
+    public Result createVoucherOrder(Long userId,Long voucherId) {
+        log.info("创建订单");
+        //判断当前用户是否是第一单
+        int count = this.count(new LambdaQueryWrapper<VoucherOrder>().eq(VoucherOrder::getUserId, userId));
+        //如果是第一单的话，为该用户创建订单
+        if (count >= 1) {
+            return Result.fail("用户已经购买");
+        }
+        //库存订单减少1
+        boolean flag = seckillVoucherService.update(new LambdaUpdateWrapper<SeckillVoucher>()
+                .eq(SeckillVoucher::getVoucherId, voucherId)
+                .setSql("stock=stock-1"));
+        if (!flag) {
+            throw new RuntimeException("秒杀券扣减失败");
+        }
+        //在voucer_order表中添加一个订单
+        log.info("添加秒杀券订单");
+        VoucherOrder voucherOrder =new VoucherOrder();
+        Long orderId=redisIdWorker.nextId("order:");
+        voucherOrder.setId(orderId);
+        voucherOrder.setUserId(userId);
+        voucherOrder.setVoucherId(voucherId);
 
         return Result.ok(orderId);
     }
