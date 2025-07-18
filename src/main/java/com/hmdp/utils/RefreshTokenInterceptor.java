@@ -28,7 +28,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         // 1.获取session
         String token = request.getHeader("Authorization");
         // 在控制台上输出前端传来的token
-        System.out.println("前端传来的toke" + token);
+        System.out.println("前端传来的token" + token);
         // 如果token为空，则返回401
         if (token == null) {
             log.info("token为空");

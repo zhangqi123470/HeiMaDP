@@ -4,14 +4,10 @@ import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import cn.hutool.json.JSON;
-import com.hmdp.dto.Result;
-import com.hmdp.entity.Shop;
-import com.hmdp.mapper.ShopMapper;
-import com.hmdp.service.IShopService;
+
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisData;
-import com.sun.xml.internal.bind.v2.model.core.ID;
+import com.sun.xml.bind.v2.model.core.ID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -56,7 +52,7 @@ public class CacheClient {
 
     }
     //通过logicExpire实现处理缓存穿透的问题
-    public <R,TD> R queryWithLogicExpire(String key,ID id,Class<R> type,Function<ID,R> dbFallback,Long timeout,TimeUnit unit){
+    public <R,TD> R queryWithLogicExpire(String key, ID id, Class<R> type, Function<ID,R> dbFallback, Long timeout, TimeUnit unit){
         //从Redis中查询数据
         String json=stringRedisTemplate.opsForValue().get(key);
         if(StrUtil.isBlank(json)){
