@@ -3,7 +3,9 @@
 
 local voucherId = ARGV[1]
 local userId = ARGV[2]
-
+-- 传递订单id
+-- 实现在lua脚本中将订单推到消息队列中的功能
+local orderId=ARGV[3]
 -- Build Redis keys
 local stockKey = "seckill:stock:" .. voucherId
 local orderKey = "seckill:order:" .. voucherId
@@ -30,5 +32,7 @@ redis.call('incrby', stockKey, -1)
 
 -- 4. Record user order
 redis.call('sadd', orderKey, userId)
+-- 发送订单消息到消息队列中
+redis.call('Xadd','stream.orders','*','userId',userId,'voucherId',voucherId,'id',orderId)
 
 return 0
