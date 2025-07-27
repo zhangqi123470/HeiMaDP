@@ -98,4 +98,14 @@ public class UserController {
         return Result.ok(userDTO);
 
     }
+    @PostMapping("/sign")
+    //实现用户签到的功能
+    public Result sign(){
+        return userService.sign();
+    }
+    //统计用户连续签到天数
+    @GetMapping("/sign/count")
+    public Result sighCount(){
+        return userService.signCount();
+    }
 }

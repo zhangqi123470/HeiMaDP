@@ -170,5 +170,27 @@ class HmDianPingApplicationTests {
             stringRedisTemplate.opsForGeo().add(key,locations);
         }
     }
+    //HyperLogLog测试
+    @Test
+    void testHyperLogLog(){
+        String[] users=new String[1000];
+        int index=0;
+
+        //将数据注入到Redis中
+        for(int i=0;i<1000000;i++){
+            //向需要进行统计的数组中插入数据
+            users[index]="user_"+i;
+            index++;
+            //如果i是1000的倍数，则将index清空，设立新的键来注入
+            if(index==1000){
+                index=0;
+                stringRedisTemplate.opsForHyperLogLog().add("hill1",users);
+            }
+            //统计已经被假注入的键值对数量
+            Long size=stringRedisTemplate.opsForHyperLogLog().size("hill1");
+            System.out.println("size="+size);
+
+        }
+    }
 
 }

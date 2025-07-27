@@ -10,19 +10,23 @@ import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
+import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.LOGIN_CODE_KEY;
-import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
+import static com.hmdp.utils.RedisConstants.*;
 import static net.sf.jsqlparser.util.validation.metadata.NamedObject.user;
 
 import java.util.UUID;
@@ -96,6 +100,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
 
         return Result.ok(token);
+    }
+
+    @Override
+    public Result sign() {
+        //获取日期
+        Long userId= UserHolder.getUser().getId();
+        //获取当前日期
+        LocalDateTime localDateTime= LocalDateTime.now();
+        //拼接bitmap
+        String keySuffix=localDateTime.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        //设置Redis键
+        String key=USER_SIGN_KEY+userId+keySuffix;
+        int dayOfMonth=localDateTime.getDayOfMonth();
+        stringRedisTemplate.opsForValue().setBit(key,dayOfMonth-1,true);
+        return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        //获取到今天为止的签到信息
+        Long userId=UserHolder.getUser().getId();
+        LocalDateTime localDateTime=LocalDateTime.now();
+        String keySuffix=localDateTime.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key=USER_SIGN_KEY+userId+keySuffix;
+        int dayOfMonth=localDateTime.getDayOfMonth();
+        //从今天开始，对Redis中的消息进行验证
+            //获取本月到今天位置所有的签到记录
+        List<Long> result=stringRedisTemplate.opsForValue().bitField(
+                key,
+                BitFieldSubCommands.create().get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0)
+                );
+        log.info("Result:{}",result);
+        if(result==null||result.isEmpty()){
+            return Result.ok(0);
+        }
+        if(result.get(0)==0||result.get(0)==null){
+            return Result.ok(0);
+        }
+        Long num=result.get(0);
+            //对本月到今天为止的所有签到记录进行校验,对Bit数组进行与运算
+        int count=0;
+            while(true){
+                //对签到记录进行校验，如果碰到当前比特位是0或者当前比特位是空，则直接break
+                if((num&1)==0){
+                    break;
+                }else{
+                    count++;
+                }
+                num>>>=1;
+            }
+        return Result.ok(count);
     }
 
     private User createUserWithPhone(String phone) {
